@@ -15,9 +15,9 @@ export class DQN {
         //     activation: 'relu',
         //     inputShape: [250, 450, 1]
         // }));
-        model.add(layers.dense({units: 100, activation: 'relu', inputShape: [250, 450]}));
-        model.add(layers.dense({units: 100, activation: 'relu'}));
-        model.add(layers.dense({units: 100, activation: 'relu'}));
+        model.add(layers.dense({units: 22, activation: 'relu', inputShape: [22, 1]}));
+        model.add(layers.dense({units: 64, activation: 'relu'}));
+        model.add(layers.dense({units: 256, activation: 'relu'}));
         // model.add(layers.batchNormalization());
         // model.add(layers.conv2d({
         //     filters: 256,
@@ -32,9 +32,9 @@ export class DQN {
         //     strides: 1,
         //     activation: 'relu'
         // }));
+        // model.add(layers.dense({units: 256, activation: 'relu'}));
         model.add(layers.flatten());
-        model.add(layers.dense({units: 100, activation: 'relu'}));
-        model.add(layers.dropout({rate: 0.25}));
+        // model.add(layers.dropout({rate: 0.25}));
         model.add(layers.dense({units: 5}));
         return model;
     }

@@ -18,7 +18,7 @@ declare global {
 const game = new Game();
 window.game = game;
 game.start();
-game.getFullState(game.teamA.players[0]);
+console.log(game.getStateTensor(game.teamA.players[0]).dataSync());
 const dqnAgent = new DQNAgent(game.teamA.players[0], game);
 const dqnAgent1 = new DQNAgent(game.teamA.players[1], game);
 const dqnAgent2 = new DQNAgent(game.teamA.players[2], game);

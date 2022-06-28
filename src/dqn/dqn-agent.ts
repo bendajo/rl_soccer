@@ -25,7 +25,7 @@ export class DQNAgent {
     private onlineNN: Sequential;
     private targetNN: Sequential;
     private epsilonFinal = 0.99;
-    private epsilonDecay = 0.00001; //0.00001
+    private epsilonDecay = 0.00005; //0.00001
     private learningRate = 0.001;
     private epsilon = 0;
     private totalReward;
@@ -49,7 +49,7 @@ export class DQNAgent {
     getRandomAction() {
         const actionSpaceLength = this.player.getActions().length - 1;
         const id = Math.floor(Math.random() * (actionSpaceLength * 25 + 1))
-        return this.player.getActions()[id % 25];
+        return this.player.getActions()[id % 5];
     }
 
     playStep() {
@@ -61,13 +61,13 @@ export class DQNAgent {
             action = this.getRandomAction();
         } else {
             tidy(() => {
-                const stateTensor: Tensor = this.game.getFullState(this.player);
+                const stateTensor: Tensor = this.game.getStateTensor(this.player);
                 let t = this.onlineNN.predict([stateTensor]);
                 if (Array.isArray(t)) {
                     t = t[0];
                 }
 
-                action = this.player.getActions()[t.argMax().dataSync()[0]];
+                action = this.player.getActions()[t.argMax(-1).dataSync()[0]];
             });
         }
         const stuff: Batch = this.game.step(this.player, action);
@@ -121,11 +121,11 @@ export class DQNAgent {
             console.log("Epsilon", this.epsilon);
             this.trainOnReplayBuffer(batchSize, gamma, _optimizer);
             const batch: Batch = this.playStep();
-            if (batch.terminated || this.epsilon >= 0.999) {
+            if (batch.terminated || this.epsilon >= 0.999 || this.game.terminated == true) {
                 rewardAverager.append(batch.reward);
                 const averageReward = rewardAverager.average();
                 this.printStats();
-                if (averageReward >= rewardThreshold || this.epsilon >= 0.999) {
+                if (averageReward >= rewardThreshold || this.epsilon >= 0.999 || this.game.terminated == true) {
                     this.saveNetwork();
                     break;
                 }

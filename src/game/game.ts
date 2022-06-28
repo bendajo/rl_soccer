@@ -45,7 +45,7 @@ export class Game {
             this.renderer.render(this.scene, this.camera);
             this.teamA.animate(this.ball);
             this.teamB.animate(this.ball);
-            this.teamB.playRandom();
+            // this.teamB.playRandom();
             this.ball.animate();
             this.checkForGoal();
             if (this.teamA.score == 3 || this.teamB.score == 3 || counter >= 100000) {
@@ -64,6 +64,16 @@ export class Game {
 
     public getState(player: Player): number[] {
         return [...player.getState(), ...this.teamA.getState(player), ...this.teamB.getState(), ...this.ball.getState()];
+    }
+
+    public getStateTensor(player: Player): Tensor {
+        const state = this.getState(player);
+        const tfbuffer = buffer([1, 22, 1]);
+        for (let i = 0; i < state.length; i++) {
+            tfbuffer.set(state[i], 0, i, 0);
+        }
+        return tfbuffer.toTensor();
+
     }
 
     public getFullState(player: Player): Tensor {
@@ -106,22 +116,12 @@ export class Game {
         return field.toTensor();
     }
 
-    public getStateTensor(player: Player): Tensor {
-        const state = this.getState(player);
-        const tfbuffer = buffer([22]);
-        for (let i = 0; i < state.length; i++) {
-            tfbuffer.set(i, state[i]);
-        }
-        return tfbuffer.toTensor();
-
-    }
-
     public step(player: Player, action: number): Batch {
         const batch = new Batch();
-        batch.state = this.getFullState(player);
+        batch.state = this.getStateTensor(player);
         batch.reward = player.step(action)
         batch.action = action;
-        batch.nextState = this.getFullState(player);
+        batch.nextState = this.getStateTensor(player);
         batch.terminated = this.terminated ? 1 : 0;
         return batch;
     }
