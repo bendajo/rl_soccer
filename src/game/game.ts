@@ -14,7 +14,8 @@ import {ObjectLoaderService} from "./services/objectLoaderService";
 import {PlayerControlService} from "./services/playerControlService";
 import {fieldHeight, fieldWidth} from "./constants";
 import {Player} from "./player";
-import {nextFrame} from "@tensorflow/tfjs";
+import {nextFrame, Tensor, buffer, tensor} from "@tensorflow/tfjs";
+import {Batch} from "../common/batch";
 
 const sizes = {
     width: window.innerWidth,
@@ -30,6 +31,7 @@ export class Game {
     teamB: Team;
     ball: Ball;
     scoreDiv: Element;
+    terminated: boolean;
 
     private objectLoaderService: ObjectLoaderService;
     private playerControlService: PlayerControlService;
@@ -38,29 +40,20 @@ export class Game {
     public start(): void {
         this.init()
         this.playerControlService.playerControl();
-        // this.playerControlService.playerControl2(this.teamB.players[0]);
         let counter = 0;
-        console.log("TEst2");
-        const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
-        const train = async function(player: Player) {
-            console.log("TEst");
-            while(true) {
-                player.moveRight();
-                console.log("TEst");
-                await nextFrame();
-            }
-        }
-        window.train = train;
         const loop = () => {
             this.renderer.render(this.scene, this.camera);
             this.teamA.animate(this.ball);
             this.teamB.animate(this.ball);
+            this.teamB.playRandom();
             this.ball.animate();
             this.checkForGoal();
-            if (this.teamA.score == 5 || this.teamB.score == 5) {
+            if (this.teamA.score == 3 || this.teamB.score == 3 || counter >= 100000) {
                 console.log("Game Over");
+                this.terminated = true;
                 return this.teamA.score > this.teamB.score ? this.teamA : this.teamB;
             }
+            counter++;
             window.requestAnimationFrame(loop);
         }
 
@@ -68,25 +61,69 @@ export class Game {
         loop();
     }
 
-    // loop() {
-    //     // counter++;
-    //     // console.log(counter);
-    // }
-    //
-    // step() {
-    //     this.renderer.render(this.scene, this.camera);
-    //     this.teamA.animate(this.ball);
-    //     this.teamB.animate(this.ball);
-    //     this.ball.animate();
-    //     this.checkForGoal();
-    //     if (this.teamA.score == 5 || this.teamB.score == 5) {
-    //         console.log("Game Over");
-    //         return this.teamA.score > this.teamB.score ? this.teamA : this.teamB;
-    //     }
-    // }
 
-    public getState(player: Player): any[] {
+    public getState(player: Player): number[] {
         return [...player.getState(), ...this.teamA.getState(player), ...this.teamB.getState(), ...this.ball.getState()];
+    }
+
+    public getFullState(player: Player): Tensor {
+        // 0 = nothing
+        // 1 = Player
+        // 2 = teammate
+        // 3 = ball
+        // 4 = opponent
+        // Field is 450 * 250 (approximately)
+
+        const width = 450, height = 250;
+        const field = buffer([1, 250, 450]);
+
+        // for (let i = 0; i < height; i++) {
+        //     field[i] = new Array(width).fill(0);
+        // }
+        let teamAPlayers = this.teamA.players;
+        if (player != null) {
+            const playerPos = player.getPosition();
+            field.set(1, 1, playerPos[0] + (height / 2),playerPos[1] + (width / 2));
+            // field[playerPos[0] + (height / 2)][playerPos[1] + (width / 2)] = 1;
+
+            teamAPlayers = teamAPlayers.filter((_player: Player) => _player.identifier !== player.identifier);
+        }
+        teamAPlayers.forEach((p: Player) => {
+            const playerPos = p.getPosition();
+            field.set(2, 1, playerPos[0] + (height / 2),playerPos[1] + (width / 2));
+            // field[playerPos[0] + (height / 2)][playerPos[1] + (width / 2)] = 2;
+        });
+
+        const ballPos = this.ball.getPosition();
+        field.set(3, 1, ballPos[0] + (height / 2),ballPos[1] + (width / 2));
+        // field[ballPos[0] + (height / 2)][ballPos[1] + (width / 2)] = 3;
+
+        this.teamB.players.forEach((p: Player) => {
+            const playerPos = p.getPosition();
+            field.set(4, 1, playerPos[0] + (height / 2),playerPos[1] + (width / 2));
+            // field[playerPos[0] + (height / 2)][playerPos[1] + (width / 2)] = 4;
+        });
+        return field.toTensor();
+    }
+
+    public getStateTensor(player: Player): Tensor {
+        const state = this.getState(player);
+        const tfbuffer = buffer([22]);
+        for (let i = 0; i < state.length; i++) {
+            tfbuffer.set(i, state[i]);
+        }
+        return tfbuffer.toTensor();
+
+    }
+
+    public step(player: Player, action: number): Batch {
+        const batch = new Batch();
+        batch.state = this.getFullState(player);
+        batch.reward = player.step(action)
+        batch.action = action;
+        batch.nextState = this.getFullState(player);
+        batch.terminated = this.terminated ? 1 : 0;
+        return batch;
     }
 
     private init() {
@@ -140,8 +177,9 @@ export class Game {
     }
 
     private initGame() {
-        this.teamA = new Team(0, "#8d0000", this.scene, 2);
-        this.teamB = new Team(1, "#0014bb", this.scene, 0);
+        this.terminated = false;
+        this.teamA = new Team(0, "#8d0000", this.scene, 5);
+        this.teamB = new Team(1, "#0014bb", this.scene, 5);
         const ballSphere = new SphereGeometry(0.25, 32, 16);
         const ballMaterial = new MeshBasicMaterial({color: 0xffff00});
         this.ball = new Ball(ballSphere, ballMaterial);
@@ -152,7 +190,7 @@ export class Game {
     }
 
     private initLight() {
-        this.scene.add(new AmbientLight(0xffffff, 0.6));
+        this.scene.add(new DirectionalLight(0xffffff, 0.6));
         const directionalLight = new DirectionalLight(0xffffff, 0.8);
         directionalLight.position.set(200, 500, 300);
         directionalLight.castShadow = true;
@@ -204,12 +242,19 @@ export class Game {
         if (awayGoalArea.containsBox(ballBox)) {
             console.log("HOME GOAL");
             this.teamA.goalScored();
+            this.teamA.players.forEach(p => p.addReward(5))
+            if (this.ball.attachedPlayer != null) {
+                this.ball.attachedPlayer.addReward(10);
+            } else if (this.ball.shotFrom != null) {
+                this.ball.shotFrom.addReward(10);
+            }
             this.resetAfterGoal();
         }
 
         if (homeGoalArea.containsBox(ballBox)) {
             console.log("AWAY GOAL");
             this.teamB.goalScored();
+            this.teamA.players.forEach(p => p.addReward(-5))
             this.resetAfterGoal();
         }
         this.scoreDiv.innerHTML = this.teamA.score + " : " + this.teamB.score;
@@ -233,6 +278,7 @@ export class Game {
         this.ball.position.set(0, 1, 0);
         this.teamA.resetPlayers();
         this.teamB.resetPlayers();
+        this.terminated = false;
     }
 
 }

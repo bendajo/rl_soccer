@@ -14,8 +14,18 @@ declare global {
         game: Game;
     }
 }
+
 const game = new Game();
 window.game = game;
 game.start();
-const dqnAgent = new DQNAgent(game.teamA.players[0]);
-dqnAgent.train().then(r => {});
+game.getFullState(game.teamA.players[0]);
+const dqnAgent = new DQNAgent(game.teamA.players[0], game);
+const dqnAgent1 = new DQNAgent(game.teamA.players[1], game);
+const dqnAgent2 = new DQNAgent(game.teamA.players[2], game);
+const dqnAgent3 = new DQNAgent(game.teamA.players[3], game);
+const dqnAgent4 = new DQNAgent(game.teamA.players[4], game);
+dqnAgent.train(1, 0.99, 0.001, 100, 1000, "").then(r => {});
+dqnAgent1.train(1, 0.99, 0.001, 100, 1000, "").then(r => {});
+dqnAgent2.train(1, 0.99, 0.001, 100, 1000, "").then(r => {});
+dqnAgent3.train(1, 0.99, 0.001, 100, 1000, "").then(r => {});
+dqnAgent4.train(1, 0.99, 0.001, 100, 1000, "").then(r => {});

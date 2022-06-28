@@ -24,10 +24,11 @@ export class Team {
     getState(player: Player = null): any[] {
         let state: any[] = [];
         // Only filter player of homeTeam
+        let _players = this.players;
         if (player != null && this.id == 0) {
-            this.players = this.players.filter((_player: Player) => _player.identifier !== player.identifier);
+            _players = _players.filter((_player: Player) => _player.identifier !== player.identifier);
         }
-        this.players.forEach((p: Player) => {
+        _players.forEach((p: Player) => {
             state = [...state, ...p.getState()];
         });
         return state;
@@ -36,7 +37,7 @@ export class Team {
 
     buildTeam(scene: Scene) {
         for (let i = 0; i < this.size; i++) {
-            const player = new Player(i,
+            const player = new Player(i, this.id,
                 new BoxBufferGeometry(0.8, 2, 0.8),
                 new MeshLambertMaterial({color:this.color}),
                 new Vector3(fiveOnFive[this.id][i][0], 1, fiveOnFive[this.id][i][1]));
@@ -44,6 +45,10 @@ export class Team {
             player.castShadow = true;
             scene.add(player);
         }
+    }
+
+    playRandom() {
+        this.players.forEach(p => p.doRandomAction());
     }
 
     goalScored() {

@@ -82,6 +82,12 @@ export class Ball extends Mesh {
         }
     }
 
+    getPosition(): number[] {
+        const x = Math.round(this.position.x * 10);
+        const z = Math.round(this.position.z * 10);
+        return [z, x];
+    }
+
     private getPlayerDirection() {
         if (this.attachedPlayer.upd ||
             this.attachedPlayer.down ||

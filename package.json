@@ -9,6 +9,7 @@
     "dev": "webpack-dev-server --config ./bundler/webpack.dev.js"
   },
   "author": "",
+  "main": "src/index.ts",
   "license": "ISC",
   "dependencies": {
     "@tensorflow/tfjs": "^3.18.0",
@@ -20,12 +21,12 @@
     "webpack-merge": "^5.8.0"
   },
   "devDependencies": {
-    "@types/socket.io": "^3.0.2",
     "@types/three": "^0.140.0",
     "copy-webpack-plugin": "^11.0.0",
     "html-webpack-plugin": "^5.5.0",
     "webpack": "^5.72.1",
     "webpack-cli": "^4.9.2",
-    "webpack-dev-server": "^4.9.0"
+    "webpack-dev-middleware": "^5.3.3",
+    "webpack-dev-server": "^4.9.2"
   }
 }

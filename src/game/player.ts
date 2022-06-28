@@ -4,6 +4,7 @@ import {fieldHeight, fieldWidth} from "./constants";
 const tf = require("@tensorflow/tfjs");
 export class Player extends Mesh {
     identifier: number;
+    teamId: number;
     basePosition: Vector3;
     speed: number;
     isMoving: boolean;
@@ -12,13 +13,16 @@ export class Player extends Mesh {
     upd: boolean; //up
     down: boolean;
     ball: Ball;
+    reward: number;
 
-    constructor(identifier: number, geometry: BoxGeometry, material: MeshBasicMaterial, basePosition: Vector3, speed: number = 0.05) {
+    constructor(identifier: number, teamId: number, geometry: BoxGeometry, material: MeshBasicMaterial, basePosition: Vector3, speed: number = 0.1) {
         super(geometry, material);
         this.identifier = identifier;
+        this.teamId = teamId;
         this.speed = speed;
         this.basePosition = basePosition;
         this.position.set(basePosition.x, basePosition.y, basePosition.z);
+        this.reward = 0;
     }
 
     shootBall() {
@@ -28,6 +32,10 @@ export class Player extends Mesh {
     }
 
     moveUp(){
+        this.upd = true;
+        this.down = false;
+        this.left = false;
+        this.right = false;
         if (!this.outOfBoundsZUp()) {
             this.position.z -= this.speed;
         } else {
@@ -36,6 +44,10 @@ export class Player extends Mesh {
     }
 
     moveDown(){
+        this.down = true;
+        this.upd = false;
+        this.left = false;
+        this.right = false;
         if (!this.outOfBoundsZDown()) {
             this.position.z += this.speed;
         } else {
@@ -44,6 +56,10 @@ export class Player extends Mesh {
     }
 
     moveLeft(){
+        this.left = true;
+        this.upd = false;
+        this.down = false;
+        this.right = false;
         if (!this.outOfBoundsXLeft()) {
             this.position.x -= this.speed;
         } else {
@@ -52,6 +68,10 @@ export class Player extends Mesh {
     }
 
     moveRight(){
+        this.right = true;
+        this.upd = false;
+        this.down = false;
+        this.left = false;
         if (!this.outOfBoundsXRight()) {
             this.position.x += this.speed;
         } else {
@@ -74,17 +94,34 @@ export class Player extends Mesh {
             this.moveRight()
         }
         //only if the ball is near the player and he is running he can get the ball:
-        if(this.position.distanceTo(ball.position) <= 0.5) {
-            if(ball.attachedPlayer != this){
-                if(ball.attachedPlayer){
+        if(this.position.distanceTo(ball.position) <= 0.8) {
+            if(ball.attachedPlayer == null || (ball.attachedPlayer.identifier != this.identifier && ball.attachedPlayer.teamId != this.teamId)) {
+                if(ball.attachedPlayer) {
+                    ball.attachedPlayer.addReward(-5);
+                    this.addReward(5);
                     ball.attachedPlayer.ball = null;
                 }
                 ball.attachedPlayer = this;
-                // TODO: send reward
+                if (ball.shotFrom != null) {
+                    if (ball.shotFrom.teamId == ball.attachedPlayer.teamId) {
+                        ball.shotFrom.addReward(2);
+                        ball.attachedPlayer.addReward(2);
+                    } else {
+                        ball.shotFrom.addReward(-2);
+                        ball.attachedPlayer.addReward(1);
+                    }
+                } else {
+
+                    ball.attachedPlayer.addReward(1);
+                }
                 ball.shotFrom = null;
                 this.ball = ball;
             }
         }
+    }
+
+    addReward(reward: number) {
+        this.reward += reward;
     }
 
     outOfBoundsXLeft(): boolean {
@@ -113,34 +150,61 @@ export class Player extends Mesh {
     }
 
 
-    getAction() {
-        let actions = ['left', 'right', 'up', 'down'];
-        if (this.ball != null) {
-            actions = [...actions, 'shoot'];
-        }
-        return actions;
+    getActions(): number[] {
+        return [0, 1, 2, 3, 4];
     }
 
-    step(action: any) {
+    getPosition(): number[] {
+        const x = Math.round(this.position.x * 10);
+        const z = Math.round(this.position.z * 10);
+        return [z, x];
+    }
+
+    step(action: any): number {
         switch(action) {
-            case 'left':
+            case 0:
                 this.moveLeft();
                 break;
-            case 'right':
+            case 1:
                 this.moveRight();
                 break;
-            case 'up':
+            case 2:
                 this.moveUp();
                 break;
-            case 'down':
+            case 3:
                 this.moveDown();
                 break;
-            case 'shoot':
+            case 4:
+                if (this.ball != null) {
+                    this.shootBall();
+                } else {
+                    this.doRandomAction();
+                }
+                break;
+        }
+        const returnReward = this.reward;
+        this.reward = 0;
+        return returnReward;
+    }
+
+    doRandomAction(includeShooting: boolean = true) {
+        const actionSpaceLength = this.getActions().length - (includeShooting ? 0 : 1);
+
+        switch(Math.floor(Math.random() * actionSpaceLength)) {
+            case 0:
+                this.moveLeft();
+                break;
+            case 1:
+                this.moveRight();
+                break;
+            case 2:
+                this.moveUp();
+                break;
+            case 3:
+                this.moveDown();
+            case 4:
                 this.shootBall();
                 break;
         }
-    }
-
-    train() {
     }
 }
