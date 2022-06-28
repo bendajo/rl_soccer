@@ -25,7 +25,7 @@ export class DQNAgent {
     private onlineNN: Sequential;
     private targetNN: Sequential;
     private epsilonFinal = 0.99;
-    private epsilonDecay = 0.0001;
+    private epsilonDecay = 0.00001; //0.00001
     private learningRate = 0.001;
     private epsilon = 0;
     private totalReward;
