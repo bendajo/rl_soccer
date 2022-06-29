@@ -25,7 +25,7 @@ export class DQNAgent {
     private onlineNN: Sequential;
     private targetNN: Sequential;
     private epsilonFinal = 0.99;
-    private epsilonDecay = 0.00005; //0.00001
+    private epsilonDecay = 0.00001; //0.00001
     private learningRate = 0.001;
     private epsilon = 0;
     private totalReward;
@@ -118,9 +118,9 @@ export class DQNAgent {
         let averageRewardBest = -Infinity;
 
         while (true) {
-            console.log("Epsilon", this.epsilon);
             this.trainOnReplayBuffer(batchSize, gamma, _optimizer);
             const batch: Batch = this.playStep();
+            console.log("Info", this.totalReward, batch.reward, this.epsilon);
             if (batch.terminated || this.epsilon >= 0.999 || this.game.terminated == true) {
                 rewardAverager.append(batch.reward);
                 const averageReward = rewardAverager.average();

@@ -7,7 +7,7 @@ export class ReplayBuffer {
     private nextId: number;
 
 
-    constructor(size: number = 100) {
+    constructor(size: number = 1000) {
         this.buffer = new Array(size);
         this.filledTo = 0;
         this.nextId = 0;
